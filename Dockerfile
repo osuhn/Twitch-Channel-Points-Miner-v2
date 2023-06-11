@@ -4,7 +4,8 @@ ARG BUILDX_QEMU_ENV
 
 WORKDIR /usr/src/app
 
-COPY ./requirements.txt ./
+# COPY ./requirements.txt ./
+COPY . .
 
 ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
 
@@ -36,4 +37,5 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --fix-missing --no-ins
   && rm -rf /usr/share/doc/*
 
 ADD ./TwitchChannelPointsMiner ./TwitchChannelPointsMiner
-ENTRYPOINT [ "python", "run.py" ]
+
+CMD [ "python", "run.py" ]
