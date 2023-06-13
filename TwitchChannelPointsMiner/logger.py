@@ -3,6 +3,7 @@ import os
 import platform
 import queue
 import pytz
+import sys
 from datetime import datetime
 from logging.handlers import QueueHandler, QueueListener, TimedRotatingFileHandler
 from pathlib import Path
@@ -214,6 +215,7 @@ class GlobalFormatter(logging.Formatter):
         if (
             self.settings.matrix is not None
             and skip_matrix is False
+            and self.settings.matrix.room_id != "..."
             and self.settings.matrix.access_token
         ):
             self.settings.matrix.send(record.msg, record.event)
@@ -235,7 +237,7 @@ def configure_loggers(username, settings):
     # Adding a username to the format based on settings
     console_username = "" if settings.console_username is False else f"[{username}] "
 
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(settings.console_level)
     console_handler.setFormatter(
         GlobalFormatter(
