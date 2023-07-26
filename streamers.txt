@@ -3,7 +3,6 @@ riotgames
 kaicenat
 rocketleague
 twitchrivals
-nickmercs
 mizkif
 quackity
 shroud
