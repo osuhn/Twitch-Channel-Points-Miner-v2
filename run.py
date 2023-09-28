@@ -110,11 +110,11 @@ for streamer in streamers:
     )
 
 twitch_miner.analytics(
-    host="0.0.0.0", port=5000, refresh=5, days_ago=7
+    host="0.0.0.0", port=int(os.getenv("ANALYTICS_PORT") or "8024"), refresh=5, days_ago=7
 )  # Start the Analytics web-server
 
 twitch_miner.mine(
     twitch_miner_channels,  # Array of streamers (order = priority)
     followers=False,  # Automatic download the list of your followers
-    followers_order=FollowersOrder.ASC,  # Sort the followers list by follow date. ASC or DESC
+    followers_order=FollowersOrder.DESC,  # Sort the followers list by follow date. ASC or DESC
 )
