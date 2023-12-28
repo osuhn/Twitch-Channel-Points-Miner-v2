@@ -33,7 +33,6 @@ elded
 viviendoenlacalle
 carreraaa
 nissaxter
-ricoy
 elzeein
 westcol
 vickypalami
@@ -50,7 +49,7 @@ elchiringuitotv
 el_yuste
 bananirou
 biyin_
-reborn_live
+reborn
 bystaxx
 werlyb
 farfadoxvevo
@@ -67,7 +66,7 @@ polispol1
 pelicanger
 suryalejo
 pokimane
-foolish_gamers
+foolish
 axozer
 mayichi
 amouranth
@@ -97,7 +96,7 @@ rocketstreetlive
 squishymuffinz
 apparentlyjack_rl
 itsjstn
-amustycow
+musty
 rizzo
 tenacitytv
 johnnyboi_i
