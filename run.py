@@ -34,13 +34,13 @@ twitch_miner = TwitchChannelPointsMiner(
     enable_analytics=True,  # Disables Analytics if False. Disabling it significantly reduces memory consumption
     disable_ssl_cert_verification=False,  # Set to True at your own risk and only to fix SSL: CERTIFICATE_VERIFY_FAILED error
     logger_settings=LoggerSettings(
-        save=True,  # If you want to save logs in a file (suggested)
+        save=False,  # If you want to save logs in a file (suggested)
         console_level=logging.INFO,  # Level of logs - use logging.DEBUG for more info
         console_username=False,  # Adds a username to every console log line if True. Useful when you have many open consoles with different accounts
         auto_clear=True,  # Create a file rotation handler with interval = 1D and backupCount = 7 if True (default)
-        time_zone="",  # Set a specific time zone for console and file loggers. Use tz database names. Example: "America/Denver"
-        file_level=logging.DEBUG,  # Level of logs - If you think the log file it's too big, use logging.INFO
-        emoji=True,  # On Windows, we have a problem printing emoji. Set to false if you have a problem
+        time_zone="Europe/London",  # Set a specific time zone for console and file loggers. Use tz database names. Example: "America/Denver"
+        file_level=logging.INFO,  # Level of logs - If you think the log file it's too big, use logging.INFO
+        emoji=False,  # On Windows, we have a problem printing emoji. Set to false if you have a problem
         less=False,  # If you think that the logs are too verbose, set this to True
         colored=True,  # If you want to print colored text
         color_palette=ColorPalette(  # You can also create a custom palette color (for the common message).
@@ -49,13 +49,15 @@ twitch_miner = TwitchChannelPointsMiner(
             BET_wiN=Fore.MAGENTA,  # Color allowed are: [BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET].
         ),
         discord=Discord(
-            webhook_api= os.getenv("DISCORD_WEBHOOK") or "",  # Discord Webhook URL
+            webhook_api=os.getenv("DISCORD_WEBHOOK") or "",  # Discord Webhook URL
             events=[
                 Events.STREAMER_ONLINE,
-                Events.STREAMER_OFFLINE,
                 Events.BET_LOSE,
                 Events.CHAT_MENTION,
-            ],  # Only these events will be sent to the chat
+                Events.BET_WIN,
+                Events.BET_REFUND,
+                Events.BONUS_CLAIM,
+            ],
         ),
     ),
     streamer_settings=StreamerSettings(
@@ -110,11 +112,14 @@ for streamer in streamers:
     )
 
 twitch_miner.analytics(
-    host="0.0.0.0", port=int(os.getenv("ANALYTICS_PORT") or "8024"), refresh=5, days_ago=7
+    host="0.0.0.0",
+    port=int(os.getenv("ANALYTICS_PORT") or "8024"),
+    refresh=5,
+    days_ago=7,
 )  # Start the Analytics web-server
 
 twitch_miner.mine(
     twitch_miner_channels,  # Array of streamers (order = priority)
-    followers=False,  # Automatic download the list of your followers
+    followers=True,  # Automatic download the list of your followers
     followers_order=FollowersOrder.DESC,  # Sort the followers list by follow date. ASC or DESC
 )

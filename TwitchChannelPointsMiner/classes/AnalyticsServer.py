@@ -137,18 +137,16 @@ def read_json(streamer, return_response=True):
         return filtered_data
 
 
-def get_challenge_points(streamer):
-    datas = read_json(streamer, return_response=False)
-    if "series" in datas and datas["series"]:
-        return datas["series"][-1]["y"]
-    return 0  # Default value when 'series' key is not found or empty
-
-
-def get_last_activity(streamer):
-    datas = read_json(streamer, return_response=False)
-    if "series" in datas and datas["series"]:
-        return datas["series"][-1]["x"]
-    return 0  # Default value when 'series' key is not found or empty
+def load_json(streamer):
+    # Plain file load, no date filtering / pandas: used where only the raw
+    # (or last) datapoint is needed.
+    fname = streamer if streamer.endswith(".json") else f"{streamer}.json"
+    try:
+        with open(os.path.join(Settings.analytics_path, fname), "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.error(f"Error reading '{fname}': {e}")
+        return {}
 
 
 def json_all():
@@ -176,17 +174,18 @@ def index(refresh=5, days_ago=7):
 
 
 def streamers():
-    return Response(
-        json.dumps(
-            [
-                {"name": s, "points": get_challenge_points(
-                    s), "last_activity": get_last_activity(s)}
-                for s in sorted(streamers_available())
-            ]
-        ),
-        status=200,
-        mimetype="application/json",
-    )
+    result = []
+    for s in sorted(streamers_available()):
+        series = load_json(s).get("series") or []
+        last = series[-1] if series else {}
+        result.append(
+            {
+                "name": s,
+                "points": last.get("y", 0),
+                "last_activity": last.get("x", 0),
+            }
+        )
+    return Response(json.dumps(result), status=200, mimetype="application/json")
 
 
 def download_assets(assets_folder, required_files):

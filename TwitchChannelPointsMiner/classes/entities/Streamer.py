@@ -88,6 +88,7 @@ class Streamer(object):
         "history",
         "streamer_url",
         "mutex",
+        "analytics_json",
     ]
 
     def __init__(self, username, settings=None):
@@ -113,6 +114,7 @@ class Streamer(object):
         self.streamer_url = f"{URL}/{self.username}"
 
         self.mutex = Lock()
+        self.analytics_json = None
 
     def __repr__(self):
         return f"Streamer(username={self.username}, channel_id={self.channel_id}, channel_points={_millify(self.channel_points)})"
@@ -250,15 +252,20 @@ class Streamer(object):
         temp_fname = fname + ".temp"  # Temporary file name
 
         with self.mutex:
-            # Create and write to the temporary file
-            with open(temp_fname, "w") as temp_file:
-                json_data = json.load(open(fname, "r")) if os.path.isfile(fname) else {}
-                if key not in json_data:
-                    json_data[key] = []
-                json_data[key].append(data)
-                json.dump(json_data, temp_file, indent=4)
+            # Load the file only once, then keep it cached in memory: re-parsing
+            # an ever-growing file on every event gets slower the longer we mine.
+            if self.analytics_json is None:
+                if os.path.isfile(fname):
+                    with open(fname, "r") as f:
+                        self.analytics_json = json.load(f)
+                else:
+                    self.analytics_json = {}
 
-            # Replace the original file with the temporary file
+            self.analytics_json.setdefault(key, []).append(data)
+
+            # Write to a temporary file, then replace atomically (no indent: compact file, less I/O)
+            with open(temp_fname, "w") as temp_file:
+                json.dump(self.analytics_json, temp_file)
             os.replace(temp_fname, fname)
 
     def leave_chat(self):

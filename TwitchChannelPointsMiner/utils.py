@@ -67,8 +67,8 @@ def get_user_agent(browser: str) -> str:
     # return USER_AGENTS["Android"]["App"]
 
 
-def remove_emoji(string: str) -> str:
-    emoji_pattern = re.compile(
+# Compiled once at import: remove_emoji runs on every log line
+EMOJI_PATTERN = re.compile(
         "["
         "\U0001F600-\U0001F64F"  # emoticons
         "\U0001F300-\U0001F5FF"  # symbols & pictographs
@@ -106,8 +106,11 @@ def remove_emoji(string: str) -> str:
         "\u23f3"
         "]+",
         flags=re.UNICODE,
-    )
-    return emoji_pattern.sub(r"", string)
+)
+
+
+def remove_emoji(string: str) -> str:
+    return EMOJI_PATTERN.sub(r"", string)
 
 
 def at_least_one_value_in_settings_is(items, attr, value=True):
@@ -150,7 +153,8 @@ def set_default_settings(settings, defaults):
 def internet_connection_available(host="8.8.8.8", port=53, timeout=3):
     try:
         socket.setdefaulttimeout(timeout)
-        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((host, port))
         return True
     except socket.error:
         return False

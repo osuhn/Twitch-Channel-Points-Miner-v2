@@ -63,7 +63,9 @@ class Twitch(object):
         # "integrity_expire",
         "client_session",
         "client_version",
+        "client_version_expire",
         "twilight_build_id_pattern",
+        "session",
     ]
 
     def __init__(self, username, user_agent, password=None):
@@ -82,6 +84,10 @@ class Twitch(object):
         # self.integrity_expire = 0
         self.client_session = token_hex(16)
         self.client_version = CLIENT_VERSION
+        self.client_version_expire = 0
+        # Shared session for connection re-use (keep-alive) across all request threads.
+        # Auth is header-based, so cross-thread cookie state is not an issue.
+        self.session = requests.Session()
         self.twilight_build_id_pattern = re.compile(
             r'window\.__twilightBuildID\s*=\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"'
         )
@@ -140,14 +146,14 @@ class Twitch(object):
 
             headers = {"User-Agent": USER_AGENTS["Linux"]["FIREFOX"]}
 
-            main_page_request = requests.get(
+            main_page_request = self.session.get(
                 streamer.streamer_url, headers=headers)
             response = main_page_request.text
             # logger.info(response)
             regex_settings = "(https://static.twitchcdn.net/config/settings.*?js|https://assets.twitch.tv/config/settings.*?.js)"
             settings_url = re.search(regex_settings, response).group(1)
 
-            settings_request = requests.get(settings_url, headers=headers)
+            settings_request = self.session.get(settings_url, headers=headers)
             response = settings_request.text
             regex_spade = '"spade_url":"(.*?)"'
             streamer.stream.spade_url = re.search(
@@ -275,7 +281,7 @@ class Twitch(object):
 
     def post_gql_request(self, json_data):
         try:
-            response = requests.post(
+            response = self.session.post(
                 GQLOperations.url,
                 json=json_data,
                 headers={
@@ -355,8 +361,13 @@ class Twitch(object):
             return False"""
 
     def update_client_version(self):
+        # Cache the version for 1 hour: this is called on every GQL request and
+        # used to re-download the whole twitch.tv homepage each time.
+        if time.time() < self.client_version_expire:
+            return self.client_version
+        self.client_version_expire = time.time() + 3600
         try:
-            response = requests.get(URL)
+            response = self.session.get(URL)
             if response.status_code != 200:
                 logger.debug(
                     f"Error with update_client_version: {response.status_code}"
@@ -530,7 +541,7 @@ class Twitch(object):
                         RequestBroadcastQualitiesURL = f"https://usher.ttvnw.net/api/channel/hls/{streamers[index].username}.m3u8?sig={signature}&token={value}"
 
                         # Get list of video qualities
-                        responseBroadcastQualities = requests.get(
+                        responseBroadcastQualities = self.session.get(
                             RequestBroadcastQualitiesURL,
                             headers={"User-Agent": self.user_agent},
                             timeout=20,
@@ -549,7 +560,7 @@ class Twitch(object):
                             continue
 
                         # Get list of video URLs
-                        responseStreamURLList = requests.get(
+                        responseStreamURLList = self.session.get(
                             BroadcastLowestQualityURL,
                             headers={"User-Agent": self.user_agent},
                             timeout=20,
@@ -567,7 +578,7 @@ class Twitch(object):
                             continue
 
                         # Perform a HEAD request to simulate watching the stream
-                        responseStreamLowestQualityURL = requests.head(
+                        responseStreamLowestQualityURL = self.session.head(
                             StreamLowestQualityURL,
                             headers={"User-Agent": self.user_agent},
                             timeout=20,
@@ -579,7 +590,7 @@ class Twitch(object):
                             continue
                         # End of fix for 2024/5 API Change
                         ##################################
-                        response = requests.post(
+                        response = self.session.post(
                             streamers[index].stream.spade_url,
                             data=streamers[index].stream.encode_payload(),
                             headers={"User-Agent": self.user_agent},
@@ -689,9 +700,6 @@ class Twitch(object):
             if community_points["availableClaim"] is not None:
                 self.claim_bonus(
                     streamer, community_points["availableClaim"]["id"])
-
-            if streamer.settings.community_goals is True:
-                self.contribute_to_community_goals(streamer)
 
             if streamer.settings.community_goals is True:
                 self.contribute_to_community_goals(streamer)
